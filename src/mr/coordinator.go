@@ -3,6 +3,7 @@ package mr
 import "log"
 import "net"
 import "os"
+import "fmt"
 import "net/rpc"
 import "net/http"
 
@@ -21,6 +22,8 @@ func (c *Coordinator) RequestTask(args *ReqTaskArgs, reply *ReqTaskReply) error 
 		
 		c.FilesInProg = append(c.FilesInProg, c.FilesToDo[0])
 		c.FilesToDo = c.FilesToDo[1:]
+
+		fmt.Printf("Sent File to Process: %s\n", reply.FileName)
 	} else {
 		reply.FileName = ""
 	}

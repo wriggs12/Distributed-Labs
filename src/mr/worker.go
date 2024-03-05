@@ -2,6 +2,9 @@ package mr
 
 import "fmt"
 import "log"
+import "os"
+import "io"
+import "sort"
 import "net/rpc"
 import "hash/fnv"
 
@@ -13,6 +16,12 @@ type KeyValue struct {
 	Key   string
 	Value string
 }
+
+type ByKey []KeyValue
+
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 //
 // use ihash(key) % NReduce to choose the reduce
@@ -32,7 +41,53 @@ func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 	
 	FileName := ReqeustTask()
-	fmt.Printf("filename: %s\n", FileName)
+
+	for FileName != "" {
+		DoWork(FileName, mapf, reducef)
+		FileName = ReqeustTask()
+	}
+
+	log.Printf("No Task Recieved, Exiting ...\n")
+
+}
+
+func DoWork(FileName string, mapf func(string, string) []KeyValue,
+	reducef func(string, []string) string) {
+
+	file, err := os.Open(FileName)
+	if err != nil {
+		log.Fatalf("cannot open %v", FileName)
+	}
+	content, err := io.ReadAll(file)
+	if err != nil {
+		log.Fatalf("cannot read %v", FileName)
+	}
+	file.Close()
+	kva := mapf(FileName, string(content))
+
+	sort.Sort(ByKey(kva))
+
+	oname := "mr-out-0"
+	ofile, _ := os.Create(oname)
+
+	i := 0
+	for i < len(kva) {
+		j := i + 1
+		for j < len(kva) && kva[j].Key == kva[i].Key {
+			j++
+		}
+		values := []string{}
+		for k := i; k < j; k++ {
+			values = append(values, kva[i].Value)
+		}
+		output := reducef(kva[i].Key, values)
+
+		fmt.Fprintf(ofile, "%v %v\n", kva[i].Key, output)
+	
+		i = j
+	}
+
+	ofile.Close()
 }
 
 func ReqeustTask() string {
