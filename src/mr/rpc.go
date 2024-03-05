@@ -30,7 +30,7 @@ type ReqTaskArgs struct {
 
 type ReqTaskReply struct {
 	FileName string
-	test string
+	OutNumber int
 }
 
 // Cook up a unique-ish UNIX-domain socket name

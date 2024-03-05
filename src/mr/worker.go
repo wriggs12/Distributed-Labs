@@ -40,18 +40,25 @@ func ihash(key string) int {
 func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 	
-	FileName := ReqeustTask()
+	reply := ReqeustTask()
+	FileName := reply.FileName
+	OutNumber := reply.OutNumber
 
 	for FileName != "" {
-		DoWork(FileName, mapf, reducef)
-		FileName = ReqeustTask()
+		DoWork(FileName, OutNumber, mapf, reducef)
+		log.Printf("Completed File: %s\n", FileName)
+
+		reply = ReqeustTask()
+		FileName = reply.FileName
+		OutNumber = reply.OutNumber
 	}
 
 	log.Printf("No Task Recieved, Exiting ...\n")
 
 }
 
-func DoWork(FileName string, mapf func(string, string) []KeyValue,
+func DoWork(FileName string, OutNumber int,
+	mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 
 	file, err := os.Open(FileName)
@@ -67,7 +74,7 @@ func DoWork(FileName string, mapf func(string, string) []KeyValue,
 
 	sort.Sort(ByKey(kva))
 
-	oname := "mr-out-0"
+	oname := fmt.Sprintf("mr-out-%d", OutNumber)
 	ofile, _ := os.Create(oname)
 
 	i := 0
@@ -90,15 +97,15 @@ func DoWork(FileName string, mapf func(string, string) []KeyValue,
 	ofile.Close()
 }
 
-func ReqeustTask() string {
+func ReqeustTask() ReqTaskReply {
 	args := ReqTaskArgs{}
 	reply := ReqTaskReply{}
 
 	ok := call("Coordinator.RequestTask", &args, &reply)
 	if ok {
-		return reply.FileName
+		return reply
 	} else {
-		return ""
+		return reply
 	}
 }
 

@@ -13,15 +13,18 @@ type Coordinator struct {
 	FilesInProg []string
 	FilesDone []string
 	NReduce int
+	OutNumber int
 }
 
 // Your code here -- RPC handlers for the worker to call.
 func (c *Coordinator) RequestTask(args *ReqTaskArgs, reply *ReqTaskReply) error {
 	if len(c.FilesToDo) != 0 {
 		reply.FileName = c.FilesToDo[0]
+		reply.OutNumber = c.OutNumber
 		
 		c.FilesInProg = append(c.FilesInProg, c.FilesToDo[0])
 		c.FilesToDo = c.FilesToDo[1:]
+		c.OutNumber++
 
 		fmt.Printf("Sent File to Process: %s\n", reply.FileName)
 	} else {
@@ -78,6 +81,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	c.FilesToDo = files
 	c.NReduce = nReduce
+	c.OutNumber = 0
 	
 	c.server()
 	return &c
